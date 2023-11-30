@@ -1,3 +1,7 @@
 service:
   host: '0.0.0.0'
   port: 8080
+access_token:
+  token_type: 'bearer'
+  expire_days: 7 
+  secret: 'super_secret_secret'

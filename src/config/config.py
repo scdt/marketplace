@@ -34,10 +34,17 @@ class _ServiceSettings(_SettingsModel):
     port: int
 
 
+class _AccessTokenSetting(_SettingsModel):
+    token_type: str
+    expire_days: int
+    secret: str
+
+
 class Settings(_SettingsModel):
     """Настройки сервиса."""
 
     service: _ServiceSettings
+    access_token: _AccessTokenSetting
 
 
 settings = Settings.from_yaml('src/config/config.yml')
