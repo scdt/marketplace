@@ -3,9 +3,11 @@
 import uvicorn
 from fastapi import FastAPI
 
+from src.app.api.users.controller import router as users_router
 from src.config.config import settings
 
 app = FastAPI()
+app.include_router(users_router)
 
 
 if __name__ == '__main__':
