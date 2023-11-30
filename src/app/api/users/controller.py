@@ -51,7 +51,7 @@ async def get_current_user(access_token: Annotated[str, Depends(oauth2_scheme)])
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
-@router.post('/api/register')
+@router.post('/api/users/register')
 async def register(user: CreateUser) -> Response:
     """Регистрация новых пользователей.
 
@@ -77,7 +77,7 @@ async def register(user: CreateUser) -> Response:
     return Response(status_code=status.HTTP_200_OK)
 
 
-@router.post('/api/auth')
+@router.post('/api/users/auth')
 async def auth_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> AccessToken:
@@ -108,7 +108,7 @@ async def auth_for_access_token(
     return AccessToken(access_token=access_token, token_type=settings.access_token.token_type)
 
 
-@router.post('/api/promote-to-admin')
+@router.post('/api/users/promote-to-admin')
 async def promote_to_admin(
     username: str,
     current_user: Annotated[User, Depends(get_current_user)],
