@@ -33,7 +33,7 @@ async def get_current_user(access_token: Annotated[str, Depends(oauth2_scheme)])
         HTTPException: не удалось декодировать токен или пользователь не найден
 
     Returns:
-        User: пользователь
+        User: текущий пользователь
     """
     try:
         payload = jwt.decode(
@@ -123,7 +123,7 @@ async def promote_to_admin(
         HTTPException: текущий пользователь не является админом или неверное имя пользователя
 
     Returns:
-        Response: возвращаемый ответ
+        Response: статус код 200, пользователь назначен администратором
     """
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
