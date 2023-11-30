@@ -52,7 +52,7 @@ class AdvertisementStorage(object):
             price=price,
             description=description,
         ))
-    
+
     def remove(self, ad_id: int):
         """Удалить объявление.
 
