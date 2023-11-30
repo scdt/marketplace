@@ -7,7 +7,7 @@ class Advertisement(object):
     """Класс объявления."""
 
     id: int
-    type: str
+    category: str
     owner: str
     title: str
     price: int

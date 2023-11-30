@@ -24,7 +24,7 @@ class AdvertisementStorage(object):
             return self.advertisements[ad_id]
         except IndexError:
             raise ValueError('Объявления с указанным id не найдено')
-    
+
     def get_all(self) -> list:
         """Получить все объявления.
 
@@ -33,11 +33,11 @@ class AdvertisementStorage(object):
         """
         return self.advertisements
 
-    def add(self, type: str, owner: str, title: str, price: int, description: str):
+    def add(self, category: str, owner: str, title: str, price: int, description: str):
         """Создание нового объявлени.
 
         Args:
-            type (str): тип объявления
+            category (str): категория объявления
             owner (str): владелец
             title (str): заголовок
             price (int): стоимость
@@ -46,7 +46,7 @@ class AdvertisementStorage(object):
         new_id = len(self.advertisements)
         self.advertisements.append(Advertisement(
             id=new_id,
-            type=type,
+            category=category,
             owner=owner,
             title=title,
             price=price,
