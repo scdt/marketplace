@@ -5,7 +5,7 @@ from bcrypt import checkpw
 from src.app.data_sources.storages.user_storage import UserStorage
 
 
-async def authenticate_user(storage: UserStorage, username: str, password: str) -> bool:
+def authenticate_user(storage: UserStorage, username: str, password: str) -> bool:
     """Метод для проверки пароля пользователя.
 
     Args:
