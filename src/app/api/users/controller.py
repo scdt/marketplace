@@ -1,53 +1,144 @@
 """Модуль содержащий эндпоинты связанные с пользователями сервиса."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
 from typing_extensions import Annotated
 
-from src.app.api.users.models import User
+from src.app.api.users.models import AccessToken, CreateUser
+from src.app.data_sources.dtos.user import User
+from src.app.data_sources.storages.user_storage import UserStorage
+from src.app.users.access_token import create_access_token
+from src.app.users.auth import authenticate_user
+from src.config.config import settings
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/auth')
+user_storage = UserStorage()
+
+user_storage.add_user('admin', 'admin')
+admin = user_storage.get_user('admin')
+admin.is_admin = True
+user_storage.update_user('admin', admin)
+
+
+async def get_current_user(access_token: Annotated[str, Depends(oauth2_scheme)]) -> User:
+    """Получение пользователя по токену доступа.
+
+    Args:
+        access_token (Annotated[str, Depends]): токен доступа
+
+    Raises:
+        HTTPException: не удалось декодировать токен или пользователь не найден
+
+    Returns:
+        User: пользователь
+    """
+    try:
+        payload = jwt.decode(
+            access_token,
+            settings.access_token.secret,
+            algorithms='HS256',
+        )
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    username = payload.get('sub')
+    if username:
+        user = user_storage.get_user(username=username)
+        if user:
+            return user
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
 
 @router.post('/api/register')
-async def register(user: User) -> Response:
+async def register(user: CreateUser) -> Response:
     """Регистрация новых пользователей.
 
     Args:
-        user (User): новый пользователь
+        user (CreateUser): пользователь
+
+    Raises:
+        HTTPException: пользователь с таким именем уже существует
 
     Returns:
-        Response: возвращаемый ответ
+        Response: статус код 200, пользователь успешно создан
     """
+    try:
+        user_storage.add_user(
+            username=user.username,
+            password=user.password,
+        )
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        )
     return Response(status_code=status.HTTP_200_OK)
 
 
 @router.post('/api/auth')
 async def auth_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-) -> Response:
-    """Аутентификация пользователя для получения jwt.
+) -> AccessToken:
+    """Аутентификация пользователя для получения токена доступа.
 
     Args:
         form_data (Annotated[OAuth2PasswordRequestForm, Depends]):
         OAuth2 форма аутентификации
 
+    Raises:
+        HTTPException: неверрные данные пользователя
+
     Returns:
-        Response: возвращаемый ответ
+        AccessToken: токен доступа и тип токена
     """
-    return Response(status_code=status.HTTP_200_OK)
+    is_password_correct = authenticate_user(
+        storage=user_storage,
+        username=form_data.username,
+        password=form_data.password,
+    )
+    if not is_password_correct:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Неверный пароль или имя пользователя',
+            headers={'WWW-Authenticate': 'Bearer'},
+        )
+    access_token = create_access_token(form_data.username)
+    return AccessToken(access_token=access_token, token_type=settings.access_token.token_type)
 
 
 @router.post('/api/promote-to-admin')
-async def promote_to_admin(username: str) -> Response:
+async def promote_to_admin(
+    username: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> Response:
     """Назначения пользователя администратором.
 
     Args:
         username (str): имя пользователя
+        current_user (Annotated[User, Depends]): текущий пользователь
+
+    Raises:
+        HTTPException: текущий пользователь не является админом или неверное имя пользователя
 
     Returns:
         Response: возвращаемый ответ
     """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    user = user_storage.get_user(username=username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Пользователь с таким именем не найден',
+        )
+    user.is_admin = True
+    try:
+        user_storage.update_user(username=username, updated_user=user)
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        )
     return Response(status_code=status.HTTP_200_OK)
