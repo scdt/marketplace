@@ -14,7 +14,7 @@ from src.app.users.auth import authenticate_user
 from src.config.config import settings
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/auth')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/users/auth')
 user_storage = UserStorage()
 
 user_storage.add_user('admin', 'admin')
@@ -27,10 +27,11 @@ async def get_current_user(access_token: Annotated[str, Depends(oauth2_scheme)])
     """Получение пользователя по токену доступа.
 
     Args:
-        access_token (Annotated[str, Depends]): токен доступа
+        access_token (Annotated[str, Depends): токен доступа
 
     Raises:
-        HTTPException: не удалось декодировать токен или пользователь не найден
+        HTTPException: не удалось декодировать токен
+        HTTPException: пользователь с таким именем не найден
 
     Returns:
         User: текущий пользователь
@@ -120,7 +121,8 @@ async def promote_to_admin(
         current_user (Annotated[User, Depends]): текущий пользователь
 
     Raises:
-        HTTPException: текущий пользователь не является админом или неверное имя пользователя
+        HTTPException: текущий пользователь не является администратором
+        HTTPException: пользователь с таким именем не найден
 
     Returns:
         Response: статус код 200, пользователь назначен администратором
@@ -134,11 +136,5 @@ async def promote_to_admin(
             detail='Пользователь с таким именем не найден',
         )
     user.is_admin = True
-    try:
-        user_storage.update_user(username=username, updated_user=user)
-    except ValueError as exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exception),
-        )
+    user_storage.update_user(username=username, updated_user=user)
     return Response(status_code=status.HTTP_200_OK)

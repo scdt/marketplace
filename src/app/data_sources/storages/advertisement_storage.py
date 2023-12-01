@@ -14,16 +14,13 @@ class AdvertisementStorage(object):
         Args:
             ad_id (int): id объявления
 
-        Raises:
-            ValueError: объявления с указанным id не найдено
-
         Returns:
             Advertisement: объявление
         """
         try:
             return self.advertisements[ad_id]
         except IndexError:
-            raise ValueError('Объявления с указанным id не найдено')
+            return None
 
     def get_all(self) -> list:
         """Получить все объявления.
