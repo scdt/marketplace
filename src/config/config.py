@@ -40,11 +40,33 @@ class _AccessTokenSetting(_SettingsModel):
     secret: str
 
 
+class _PostgresSettings(_SettingsModel):
+    login: str
+    password: str
+    db_name: str
+    host: str
+    port: int
+
+    @property
+    def url(self):
+        return '{0}:{1}@{2}:{3}'.format(
+            self.login,
+            self.password,
+            self.host,
+            self.port,
+        )
+
+    @property
+    def uri(self):
+        return 'postgresql+asyncpg://{0}/{1}'.format(self.url, self.db_name)
+
+
 class Settings(_SettingsModel):
     """Настройки сервиса."""
 
     service: _ServiceSettings
     access_token: _AccessTokenSetting
+    postgres: _PostgresSettings
 
 
 settings = Settings.from_yaml('src/config/config.yml')
