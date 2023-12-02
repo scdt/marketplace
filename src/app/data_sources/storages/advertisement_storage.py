@@ -1,65 +1,99 @@
 """Модуль содержит класс AdvertisementStorage."""
 
+from sqlalchemy import delete, insert, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from src.app.data_sources.dtos.advertisement import Advertisement
+from src.app.data_sources.models import AdvertisementAlchemyModel
 
 
 class AdvertisementStorage(object):
     """Класс хранилища объявлений."""
 
-    advertisements = []
-
-    def get_by_id(self, ad_id: int) -> Advertisement:
+    async def get_by_id(self, session: AsyncSession, ad_id: int) -> Advertisement:
         """Получение объявления по id.
 
         Args:
+            session: (AsyncSession): сессия подключения к бд
             ad_id (int): id объявления
 
         Returns:
             Advertisement: объявление
         """
-        try:
-            return self.advertisements[ad_id]
-        except IndexError:
-            return None
+        advertisement = (await session.execute(
+            select(AdvertisementAlchemyModel).where(
+                AdvertisementAlchemyModel.id == ad_id,
+            ).options(
+                selectinload(AdvertisementAlchemyModel.owner),
+            ),
+        )).scalar()
+        if advertisement:
+            return Advertisement.from_orm(advertisement)
 
-    def get_all(self) -> list:
+    async def get_all(self, session: AsyncSession) -> list:
         """Получить все объявления.
+
+        Args:
+            session: (AsyncSession): сессия подключения к бд
 
         Returns:
             list: объявления
         """
-        return self.advertisements
+        advertisements = (await session.execute(
+            select(AdvertisementAlchemyModel).options(
+                selectinload(AdvertisementAlchemyModel.owner),
+            ),
+        )).scalars().all()
+        return [Advertisement.from_orm(ad) for ad in advertisements]
 
-    def add(self, category: str, owner: str, title: str, price: int, description: str):
+    async def add(
+        self,
+        session: AsyncSession,
+        category: str,
+        owner_id: int,
+        title: str,
+        price: int,
+        description: str,
+    ):
         """Создание нового объявлени.
 
         Args:
+            session: (AsyncSession): сессия подключения к бд
             category (str): категория объявления
-            owner (str): владелец
+            owner_id (int): id владельца
             title (str): заголовок
             price (int): стоимость
             description (str): описание
         """
-        new_id = len(self.advertisements)
-        self.advertisements.append(Advertisement(
-            id=new_id,
-            category=category,
-            owner=owner,
-            title=title,
-            price=price,
-            description=description,
-        ))
+        await session.execute(
+            insert(AdvertisementAlchemyModel).values(
+                category=category,
+                owner_id=owner_id,
+                title=title,
+                price=price,
+                description=description,
+            ),
+        )
+        await session.commit()
 
-    def remove(self, ad_id: int):
+    async def remove(self, session: AsyncSession, ad_id: int):
         """Удалить объявление.
 
         Args:
+            session: (AsyncSession): сессия подключения к бд
             ad_id (int): id объявления
 
         Raises:
-            ValueError: объявления с указанным id не найдено
+            ValueError: объявление с указанным id не найдено
         """
-        try:
-            self.advertisements.pop(ad_id)
-        except IndexError:
-            raise ValueError('Объявления с указанным id не найдено')
+        advertisement = await self.get_by_id(session=session, ad_id=ad_id)
+        if not advertisement:
+            raise ValueError('Объявление с указанным id не найдено')
+
+        await session.execute(
+            delete(AdvertisementAlchemyModel).where(
+                AdvertisementAlchemyModel.id == advertisement.id,
+            ),
+        )
+        await session.commit()
