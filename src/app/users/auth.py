@@ -12,7 +12,7 @@ async def authenticate_user(
     session: AsyncSession,
     username: str,
     password: str,
-) -> User:
+) -> User | None:
     """Метод для проверки пароля пользователя.
 
     Args:
@@ -22,10 +22,10 @@ async def authenticate_user(
         password (str): пароль пользователя
 
     Returns:
-        User: пользователь
+        User | None: пользователь или None если неверные данные
     """
     user = await storage.get_user_by_username(session=session, username=username)
-    is_password_correct = checkpw(password.encode(), user.password_hash.encode())
-    if not user or not is_password_correct:
-        return False
-    return user
+    if not user:
+        return None
+    if checkpw(password.encode(), user.password_hash.encode()):
+        return user
