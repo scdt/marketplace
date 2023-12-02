@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field
 class CreateUser(BaseModel):
     """Модель для создания пользователя."""
 
-    username: str = Field(max_length=100)
-    password: str = Field(max_length=100)
+    username: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=1, max_length=100)
 
 
 class AccessToken(BaseModel):
