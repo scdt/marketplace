@@ -7,18 +7,18 @@ from jose import jwt
 from src.config.config import settings
 
 
-def create_access_token(username: str) -> str:
+def create_access_token(user_id: int) -> str:
     """Функция для создания jwt токена.
 
     Args:
-        username (str): имя пользователя
+        user_id (int): id пользователя
 
     Returns:
         str: jwt токен
     """
     expire = datetime.utcnow() + timedelta(days=settings.access_token.expire_days)
     to_encode = {
-        'sub': username,
+        'sub': str(user_id),
         'exp': expire,
     }
     return jwt.encode(

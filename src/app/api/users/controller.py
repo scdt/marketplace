@@ -27,12 +27,12 @@ async def get_current_user(
     """Получение пользователя по токену доступа.
 
     Args:
-        access_token (Annotated[str, Depends): токен доступа
+        access_token (Annotated[str, Depends]): токен доступа
         session(AsyncSession): сессия подключения к бд
 
     Raises:
         HTTPException: не удалось декодировать токен
-        HTTPException: пользователь с таким именем не найден
+        HTTPException: пользователь с таким id не найден
 
     Returns:
         User: текущий пользователь
@@ -44,13 +44,19 @@ async def get_current_user(
             algorithms='HS256',
         )
     except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    username = payload.get('sub')
-    if username:
-        user = await user_storage.get_user_by_username(session=session, username=username)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Не удалось декодировать токен',
+        )
+    user_id = int(payload.get('sub'))
+    if user_id:
+        user = await user_storage.get_user_by_id(session=session, user_id=user_id)
         if user:
             return user
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail='Пользователь с таким id не найден',
+    )
 
 
 @router.post('/api/users/register')
@@ -102,19 +108,19 @@ async def auth_for_access_token(
     Returns:
         AccessToken: токен доступа и тип токена
     """
-    is_password_correct = await authenticate_user(
+    user = await authenticate_user(
         storage=user_storage,
         session=session,
         username=form_data.username,
         password=form_data.password,
     )
-    if not is_password_correct:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Неверный пароль или имя пользователя',
             headers={'WWW-Authenticate': 'Bearer'},
         )
-    access_token = create_access_token(form_data.username)
+    access_token = create_access_token(user.user_id)
     return AccessToken(access_token=access_token, token_type=settings.access_token.token_type)
 
 
