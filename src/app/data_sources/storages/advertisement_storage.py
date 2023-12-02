@@ -11,7 +11,7 @@ from src.app.data_sources.models import AdvertisementAlchemyModel
 class AdvertisementStorage(object):
     """Класс хранилища объявлений."""
 
-    async def get_by_id(self, session: AsyncSession, ad_id: int) -> Advertisement:
+    async def get_by_id(self, session: AsyncSession, ad_id: int) -> Advertisement | None:
         """Получение объявления по id.
 
         Args:
@@ -19,7 +19,7 @@ class AdvertisementStorage(object):
             ad_id (int): id объявления
 
         Returns:
-            Advertisement: объявление
+            Advertisement | None: объявление или None если не найдено
         """
         advertisement = (await session.execute(
             select(AdvertisementAlchemyModel).where(
